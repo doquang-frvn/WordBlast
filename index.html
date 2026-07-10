@@ -80,9 +80,27 @@
   .cell.fill{box-shadow:inset 0 -4px 0 rgba(0,0,0,.14), inset 0 2px 0 rgba(255,255,255,.35);}
   .cell.ghost-ok{background:rgba(95,201,123,.45); outline:2px dashed var(--grass); outline-offset:-2px;}
   .cell.ghost-bad{background:rgba(255,107,107,.30); outline:2px dashed var(--coral); outline-offset:-2px;}
-  .cell.clearing{animation:blast .3s ease forwards;}
-  @keyframes blast{0%{transform:scale(1)}45%{transform:scale(1.18); filter:brightness(1.5)}100%{transform:scale(0); opacity:0}}
+  .cell.clearing{animation:blast .32s ease forwards;}
+  @keyframes blast{0%{transform:scale(1)}40%{transform:scale(1.25) rotate(6deg); filter:brightness(1.7)}100%{transform:scale(0) rotate(20deg); opacity:0}}
   @keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+  /* ---------- Particle burst ---------- */
+  .particle{position:fixed; left:0; top:0; border-radius:50%; pointer-events:none; z-index:80; will-change:transform,opacity;}
+  @keyframes fly{
+    0%{transform:translate(var(--x0),var(--y0)) scale(1); opacity:1;}
+    100%{transform:translate(var(--x1),var(--y1)) scale(.2); opacity:0;}
+  }
+  .particle.spark{animation:fly var(--dur,.55s) cubic-bezier(.2,.7,.3,1) forwards;}
+
+  /* combo flying label */
+  .combo-pop{position:fixed; z-index:91; pointer-events:none; font-family:'Baloo 2',cursive; font-weight:800;
+    color:var(--gold); text-shadow:0 2px 0 rgba(0,0,0,.18); white-space:nowrap;
+    animation:comboUp .8s ease forwards;}
+  @keyframes comboUp{0%{opacity:0; transform:translate(-50%,-50%) scale(.6)}20%{opacity:1; transform:translate(-50%,-50%) scale(1.15)}100%{opacity:0; transform:translate(-50%,-140%) scale(1)}}
+
+  /* board shake on big combo */
+  @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-4px,3px)}80%{transform:translate(3px,-2px)}}
+  #board.shake{animation:shake .35s ease;}
 
   /* ---------- Tray ---------- */
   #tray{display:flex; justify-content:space-around; align-items:center; gap:8px; min-height:96px;
@@ -295,9 +313,25 @@
       o.start(); o.stop(AC.currentTime+dur);
     }catch(e){}
   }
-  const sPlace = ()=>beep(330,.09,'triangle');
-  const sClear = ()=>{beep(523,.12,'sine'); setTimeout(()=>beep(784,.14,'sine'),90);};
-  const sLetter= ()=>beep(660,.1,'square');
+  function chord(freqs,dur,type,gap){
+    if(muted) return;
+    freqs.forEach((f,i)=> setTimeout(()=>beep(f,dur,type), i*(gap||0)) );
+  }
+  const sPlace = ()=>beep(300,.07,'triangle');
+  const NOTE = {C4:261.6,D4:293.7,E4:329.6,F4:349.2,G4:392.0,A4:440.0,B4:493.9,C5:523.3,D5:587.3,E5:659.3,G5:784.0,C6:1046.5};
+  function sClear(lines){
+    const sets = [
+      [NOTE.C5,NOTE.E5],
+      [NOTE.C5,NOTE.E5,NOTE.G5],
+      [NOTE.E5,NOTE.G5,NOTE.C6],
+      [NOTE.C5,NOTE.E5,NOTE.G5,NOTE.C6],
+    ];
+    const idx=Math.max(0,Math.min(sets.length-1,(lines||1)-1));
+    chord(sets[idx], .16, 'sine', 55);
+  }
+  const sLetter= ()=>beep(700,.09,'square');
+  function sWin(){ chord([NOTE.C5,NOTE.E5,NOTE.G5,NOTE.C6,NOTE.G5,NOTE.C6],.15,'triangle',90); }
+  function sLose(){ chord([NOTE.A4,NOTE.F4,NOTE.D4,220],.22,'sawtooth',150); }
 
   // ---- Phát âm tiếng Anh ----
   function speak(text,rate){
@@ -395,7 +429,7 @@
     for(let i=filled.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[filled[i],filled[j]]=[filled[j],filled[i]];}
     const pick=filled.slice(0,6);
     pick.forEach(([r,c])=>{ cells[idx(r,c)].classList.add('clearing'); });
-    if(pick.length) sClear();
+    if(pick.length){ sClear(1); pick.forEach(([r,c])=>spawnParticles(cells[idx(r,c)], board[r][c])); }
     setTimeout(()=>{ pick.forEach(([r,c])=>board[r][c]=null); renderBoard(); checkGameOver(); }, 300);
   }
 
@@ -404,7 +438,7 @@
     c.querySelector('.ce').textContent=emoji;
     c.querySelector('.cw').textContent=word+'!';
     c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
-    beep(660,.1); setTimeout(()=>beep(880,.12),110); setTimeout(()=>beep(1046,.16),230);
+    sWin();
   }
 
   // ---- Khay khối ----
@@ -451,6 +485,85 @@
   }
   function place(p,ar,ac){ p.shape.forEach(([r,c])=>{ board[ar+r][ac+c]=p.color; }); }
 
+  // ---- Hiệu ứng hạt nổ ----
+  function spawnParticles(cellEl,colorVar){
+    const rect=cellEl.getBoundingClientRect();
+    const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+    const col=getComputedStyle(document.documentElement).getPropertyValue(colorVar.replace('var(','').replace(')','')).trim() || '#FFC53D';
+    const n=6;
+    for(let i=0;i<n;i++){
+      const p=document.createElement('div');
+      p.className='particle spark';
+      const size=4+Math.random()*5;
+      p.style.width=size+'px'; p.style.height=size+'px';
+      p.style.background=col;
+      const ang=(Math.PI*2*i/n)+Math.random()*.6;
+      const dist=26+Math.random()*30;
+      const x1=Math.cos(ang)*dist, y1=Math.sin(ang)*dist-8;
+      p.style.setProperty('--x0', cx+'px'); p.style.setProperty('--y0', cy+'px');
+      p.style.setProperty('--x1', (cx+x1)+'px'); p.style.setProperty('--y1', (cy+y1)+'px');
+      p.style.setProperty('--dur', (.45+Math.random()*.25)+'s');
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(), 800);
+    }
+  }
+
+  function showCombo(lines){
+    if(lines<2) return;
+    const rect=boardEl.getBoundingClientRect();
+    const label=document.createElement('div');
+    label.className='combo-pop';
+    const texts=['','','Combo x2! 🔥','Combo x3! 🌟','SIÊU COMBO! 🎆'];
+    label.textContent = texts[Math.min(lines,4)];
+    label.style.left=(rect.left+rect.width/2)+'px';
+    label.style.top=(rect.top+rect.height*0.4)+'px';
+    label.style.fontSize= (20+Math.min(lines,4)*4)+'px';
+    document.body.appendChild(label);
+    setTimeout(()=>label.remove(), 820);
+    if(lines>=3){ boardEl.classList.remove('shake'); void boardEl.offsetWidth; boardEl.classList.add('shake'); }
+  }
+
+  // ---- Trọng lực: khối rơi xuống lấp chỗ trống sau khi nổ ----
+  function applyGravityAnimated(cb){
+    const {rect,pad,gap,size}=cellMetrics();
+    const step=size+gap;
+    const moves=[]; // {c, fromRow, toRow, color}
+    for(let c=0;c<N;c++){
+      const vals=[];
+      for(let r=0;r<N;r++) if(board[r][c]) vals.push({r, color:board[r][c]});
+      // xếp dồn xuống đáy, giữ nguyên thứ tự tương đối
+      const newRows=[];
+      for(let i=0;i<vals.length;i++) newRows.push(N-vals.length+i);
+      for(let i=0;i<vals.length;i++){
+        const from=vals[i].r, to=newRows[i];
+        if(from!==to) moves.push({c, from, to, color:vals[i].color});
+      }
+      // cập nhật board cho cột này
+      for(let r=0;r<N;r++) board[r][c]=null;
+      for(let i=0;i<vals.length;i++) board[newRows[i]][c]=vals[i].color;
+    }
+    if(moves.length===0){ renderBoard(); if(cb) cb(); return; }
+    // vẽ trạng thái hiện có (đã xóa toClear), rồi animate các ô rơi
+    renderBoard();
+    moves.forEach(m=>{
+      const el=cells[idx(m.to,m.c)];
+      const dy=(m.from-m.to)*step;
+      el.style.transition='none';
+      el.style.transform=`translateY(${-dy}px)`;
+      // ép reflow rồi trả về vị trí thật
+      void el.offsetWidth;
+      el.style.transition='transform .28s cubic-bezier(.3,.6,.3,1)';
+      el.style.transform='translateY(0)';
+    });
+    setTimeout(()=>{
+      moves.forEach(m=>{
+        const el=cells[idx(m.to,m.c)];
+        el.style.transition=''; el.style.transform='';
+      });
+      if(cb) cb();
+    }, 300);
+  }
+
   function clearLines(){
     const fullR=[], fullC=[];
     for(let r=0;r<N;r++) if(board[r].every(v=>v)) fullR.push(r);
@@ -460,14 +573,17 @@
     const toClear=new Set();
     fullR.forEach(r=>{ for(let c=0;c<N;c++) toClear.add(idx(r,c)); });
     fullC.forEach(c=>{ for(let r=0;r<N;r++) toClear.add(idx(r,c)); });
-    toClear.forEach(i=>cells[i].classList.add('clearing'));
-    sClear();
+    toClear.forEach(i=>{
+      cells[i].classList.add('clearing');
+      spawnParticles(cells[i], board[(i/N)|0][i%N]);
+    });
+    sClear(lines);
+    showCombo(lines);
     let pts=toClear.size*10 + (lines-1)*30;
     score+=pts; renderScore();
     setTimeout(()=>{
       toClear.forEach(i=>{ board[(i/N)|0][i%N]=null; });
-      renderBoard();
-      earnLetters(lines);
+      applyGravityAnimated(()=>{ earnLetters(lines); });
     }, 300);
     return lines;
   }
@@ -493,7 +609,7 @@
     document.getElementById('final').textContent='Điểm: '+score;
     document.getElementById('wordsdone').textContent='Đã học '+wordsDone+' từ tiếng Anh';
     document.getElementById('gameover').classList.add('show');
-    beep(300,.2,'sawtooth'); setTimeout(()=>beep(200,.3,'sawtooth'),160);
+    sLose();
   }
 
   // ---- Kéo thả (pointer: chuột + cảm ứng) ----
