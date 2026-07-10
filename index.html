@@ -105,17 +105,17 @@
   #board.mega-shake{animation:megashake .6s ease;}
 
   /* ---------- Mega lightning strike (Candy Crush style) ---------- */
-  .mega-flash{position:fixed; inset:0; background:#fff; opacity:0; z-index:97; pointer-events:none; animation:megaFlash 1.1s ease-out forwards;}
-  @keyframes megaFlash{0%{opacity:0}10%{opacity:.85}22%{opacity:.15}34%{opacity:.6}48%{opacity:.1}62%{opacity:.3}100%{opacity:0}}
+  .mega-flash{position:fixed; inset:0; background:#fff; opacity:0; z-index:97; pointer-events:none; animation:megaFlash 1.8s ease-out forwards;}
+  @keyframes megaFlash{0%{opacity:0}8%{opacity:.85}20%{opacity:.2}32%{opacity:.65}46%{opacity:.12}60%{opacity:.35}78%{opacity:.08}100%{opacity:0}}
   .mega-overlay{position:fixed; inset:0; z-index:98; pointer-events:none; overflow:hidden;}
-  .bolt{position:absolute; top:0; filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 18px var(--sky)); animation:boltFlicker 1s steps(2,end) forwards;}
-  @keyframes boltFlicker{0%{opacity:0}12%{opacity:1}26%{opacity:.25}38%{opacity:1}55%{opacity:.15}70%{opacity:1}88%{opacity:.3}100%{opacity:0}}
+  .bolt{position:absolute; top:0; filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 18px var(--sky)); animation:boltFlicker 1.6s steps(2,end) forwards;}
+  @keyframes boltFlicker{0%{opacity:0}10%{opacity:1}24%{opacity:.3}36%{opacity:1}52%{opacity:.2}66%{opacity:1}82%{opacity:.35}92%{opacity:.8}100%{opacity:0}}
   .mega-pop{position:fixed; left:50%; top:30%; transform:translate(-50%,-50%) scale(.5); z-index:99; pointer-events:none;
     font-family:'Baloo 2',cursive; font-weight:800; font-size:clamp(30px,9vw,52px); text-align:center;
     color:#FFF6CE; -webkit-text-stroke:2px #E8890C;
     text-shadow:0 0 14px #FFD35C, 0 0 30px #FF9445, 0 4px 0 rgba(0,0,0,.25);
-    animation:megaPop 1.6s cubic-bezier(.2,.9,.3,1) forwards;}
-  @keyframes megaPop{0%{opacity:0; transform:translate(-50%,-50%) scale(.3) rotate(-8deg)}12%{opacity:1; transform:translate(-50%,-50%) scale(1.25) rotate(4deg)}25%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}80%{opacity:1; transform:translate(-50%,-55%) scale(1) rotate(0deg)}100%{opacity:0; transform:translate(-50%,-75%) scale(.9) rotate(0deg)}}
+    animation:megaPop 2.4s cubic-bezier(.2,.9,.3,1) forwards;}
+  @keyframes megaPop{0%{opacity:0; transform:translate(-50%,-50%) scale(.3) rotate(-8deg)}10%{opacity:1; transform:translate(-50%,-50%) scale(1.25) rotate(4deg)}20%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}85%{opacity:1; transform:translate(-50%,-55%) scale(1) rotate(0deg)}100%{opacity:0; transform:translate(-50%,-75%) scale(.9) rotate(0deg)}}
 
   /* ---------- Word action stage ---------- */
   .word-action-overlay{position:fixed; inset:0; pointer-events:none; z-index:95; overflow:hidden;}
@@ -496,17 +496,21 @@
   function sLose(){ chord([NOTE.A4,NOTE.F4,NOTE.D4,220],.22,'sawtooth',150); }
 
   // ---- Phát âm tiếng Anh ----
-  function speak(text,rate){
+  function speakNow(text,rate){ // đọc nối vào hàng đợi, KHÔNG hủy tiếng đang đọc
+    try{
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang='en-US'; u.rate=rate||.85; u.pitch=1.05;
+      const vs=speechSynthesis.getVoices();
+      const en=vs.find(v=>/en[-_]US/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang));
+      if(en) u.voice=en;
+      speechSynthesis.resume(); // chống lỗi Chrome bị treo loa
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  function speak(text,rate){ // hủy hàng đợi rồi đọc (dùng cho cả từ)
     try{
       speechSynthesis.cancel();
-      setTimeout(()=>{
-        const u=new SpeechSynthesisUtterance(text);
-        u.lang='en-US'; u.rate=rate||.85; u.pitch=1.05;
-        const vs=speechSynthesis.getVoices();
-        const en=vs.find(v=>/en[-_]US/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang));
-        if(en) u.voice=en;
-        speechSynthesis.speak(u);
-      }, 40);
+      setTimeout(()=>speakNow(text,rate), 80);
     }catch(e){}
   }
   if('speechSynthesis' in window) speechSynthesis.getVoices();
@@ -583,9 +587,9 @@
       const letter=wd.w[revealed-1];
       sLetterWin();
       renderWord();
-      setTimeout(()=>speak(letter,.6), 120);
-      if(revealed>=wd.w.length){ setTimeout(()=>completeWord(), 350); return; }
-      setTimeout(step, 620);
+      setTimeout(()=>speakNow(letter,.6), 150);
+      if(revealed>=wd.w.length){ setTimeout(()=>completeWord(), 900); return; }
+      setTimeout(step, 750);
     }
     step();
   }
@@ -664,7 +668,10 @@
     const pick=filled.slice(0,6);
     pick.forEach(([r,c])=>{ cells[idx(r,c)].classList.add('clearing'); });
     if(pick.length){ sClear(1); pick.forEach(([r,c])=>spawnParticles(cells[idx(r,c)], board[r][c])); }
-    setTimeout(()=>{ pick.forEach(([r,c])=>board[r][c]=null); renderBoard(); checkGameOver(); }, 300);
+    setTimeout(()=>{
+      pick.forEach(([r,c])=>board[r][c]=null);
+      applyGravityAnimated(()=>{ checkGameOver(); }); // khối rơi xuống sau khi nổ thưởng
+    }, 480);
   }
 
   function playWordAction(wd){
@@ -768,14 +775,15 @@
   // ---- Hiệu ứng SÉT ĐÁNH siêu cấp (khi combo lớn hoặc nổ liên tiếp) ----
   function megaSound(){
     if(muted) return;
-    beep(1400,.09,'sawtooth');
-    setTimeout(()=>beep(150,.7,'sawtooth'),90);
-    chord([NOTE.C6,NOTE.G5,NOTE.E5,NOTE.C5], .3, 'triangle', 100);
+    beep(1400,.12,'sawtooth');
+    setTimeout(()=>beep(150,.9,'sawtooth'),140);
+    setTimeout(()=>beep(110,.7,'sawtooth'),700);
+    chord([NOTE.C6,NOTE.G5,NOTE.E5,NOTE.C5,NOTE.G5,NOTE.C6], .35, 'triangle', 160);
   }
   function megaStrike(){
     const vw=window.innerWidth, vh=window.innerHeight;
     const flash=document.createElement('div'); flash.className='mega-flash';
-    document.body.appendChild(flash); setTimeout(()=>flash.remove(), 1150);
+    document.body.appendChild(flash); setTimeout(()=>flash.remove(), 1900);
 
     const overlay=document.createElement('div'); overlay.className='mega-overlay';
     document.body.appendChild(overlay);
@@ -804,12 +812,12 @@
     label.className='mega-pop';
     label.textContent='SIÊU ĐẲNG! ⚡⚡⚡';
     document.body.appendChild(label);
-    setTimeout(()=>label.remove(), 1650);
+    setTimeout(()=>label.remove(), 2450);
 
     megaSound();
     boardEl.classList.remove('mega-shake'); void boardEl.offsetWidth; boardEl.classList.add('mega-shake');
     bumpScore(50);
-    setTimeout(()=>overlay.remove(), 1100);
+    setTimeout(()=>overlay.remove(), 1700);
   }
 
   function showCombo(lines){
