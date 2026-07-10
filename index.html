@@ -102,6 +102,54 @@
   @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-4px,3px)}80%{transform:translate(3px,-2px)}}
   #board.shake{animation:shake .35s ease;}
 
+  /* ---------- Word action stage ---------- */
+  .word-action-overlay{position:fixed; inset:0; pointer-events:none; z-index:95; overflow:hidden;}
+  .wa-emoji{position:absolute; font-size:min(20vw,86px); line-height:1; filter:drop-shadow(0 8px 8px rgba(0,0,0,.25));}
+  .wa-run{animation: waRun 1.7s cubic-bezier(.4,.05,.3,1) forwards;}
+  @keyframes waRun{
+    0%{left:-18%; bottom:6%; transform:scaleX(-1) translateY(0);}
+    12%{transform:scaleX(-1) translateY(-14px);} 24%{transform:scaleX(-1) translateY(0);}
+    36%{transform:scaleX(-1) translateY(-14px);} 48%{transform:scaleX(-1) translateY(0);}
+    60%{transform:scaleX(-1) translateY(-14px);} 72%{transform:scaleX(-1) translateY(0);}
+    100%{left:112%; bottom:6%; transform:scaleX(-1) translateY(0);}
+  }
+  .wa-fly{animation: waFly 2s ease-in-out forwards;}
+  @keyframes waFly{
+    0%{left:-18%; top:22%; transform:translateY(0) rotate(-4deg);}
+    30%{top:12%; transform:translateY(-6px) rotate(3deg);}
+    60%{top:18%; transform:translateY(4px) rotate(-3deg);}
+    100%{left:112%; top:14%; transform:translateY(0) rotate(2deg);}
+  }
+  .wa-swim{animation: waSwim 2s ease-in-out forwards;}
+  @keyframes waSwim{
+    0%{left:-18%; top:46%; transform:scaleX(-1) rotate(0deg);}
+    25%{top:40%; transform:scaleX(-1) rotate(-6deg);}
+    50%{top:52%; transform:scaleX(-1) rotate(6deg);}
+    75%{top:40%; transform:scaleX(-1) rotate(-6deg);}
+    100%{left:112%; top:46%; transform:scaleX(-1) rotate(0deg);}
+  }
+  .wa-bounce{animation: waBounce 1.9s ease-in-out forwards;}
+  @keyframes waBounce{
+    0%{left:-18%; bottom:6%;}
+    12%{bottom:38%;} 24%{bottom:6%;} 36%{bottom:34%;} 48%{bottom:6%;}
+    60%{bottom:30%;} 72%{bottom:6%;} 84%{bottom:22%;}
+    100%{left:112%; bottom:6%;}
+  }
+  .wa-rain{animation: waRainDrop 1.4s ease-in forwards; font-size:min(14vw,58px);}
+  @keyframes waRainDrop{
+    0%{top:-15%; opacity:0; transform:rotate(0deg);}
+    12%{opacity:1;}
+    100%{top:108%; opacity:.85; transform:rotate(12deg);}
+  }
+  .wa-spin{animation: waSpin 1.7s ease forwards;}
+  @keyframes waSpin{
+    0%{left:50%; top:46%; transform:translate(-50%,-50%) scale(0) rotate(-35deg); opacity:0;}
+    28%{transform:translate(-50%,-50%) scale(1.35) rotate(12deg); opacity:1;}
+    45%{transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1;}
+    78%{transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1;}
+    100%{transform:translate(-50%,-50%) scale(.65) rotate(14deg); opacity:0;}
+  }
+
   /* ---------- Tray ---------- */
   #tray{display:flex; justify-content:space-around; align-items:center; gap:8px; min-height:96px;
     background:var(--panel); border:2px solid var(--panel-line); border-radius:22px; padding:10px; box-shadow:var(--shadow);}
@@ -226,37 +274,91 @@
   const WORDS = [
     // Con vật
     {w:'CAT',e:'🐱',v:'con mèo',t:'Con vật'},   {w:'DOG',e:'🐶',v:'con chó',t:'Con vật'},
+    {w:'FOX',e:'🦊',v:'con cáo',t:'Con vật'},    {w:'OWL',e:'🦉',v:'con cú',t:'Con vật'},
     {w:'FISH',e:'🐟',v:'con cá',t:'Con vật'},    {w:'BIRD',e:'🐦',v:'con chim',t:'Con vật'},
     {w:'FROG',e:'🐸',v:'con ếch',t:'Con vật'},   {w:'BEAR',e:'🐻',v:'con gấu',t:'Con vật'},
     {w:'DUCK',e:'🦆',v:'con vịt',t:'Con vật'},   {w:'LION',e:'🦁',v:'sư tử',t:'Con vật'},
+    {w:'WOLF',e:'🐺',v:'con sói',t:'Con vật'},   {w:'GOAT',e:'🐐',v:'con dê',t:'Con vật'},
+    {w:'DEER',e:'🦌',v:'con hươu',t:'Con vật'},
     {w:'TIGER',e:'🐯',v:'con hổ',t:'Con vật'},   {w:'HORSE',e:'🐴',v:'con ngựa',t:'Con vật'},
     {w:'SHEEP',e:'🐑',v:'con cừu',t:'Con vật'},  {w:'MOUSE',e:'🐭',v:'con chuột',t:'Con vật'},
     {w:'SNAKE',e:'🐍',v:'con rắn',t:'Con vật'},  {w:'PANDA',e:'🐼',v:'gấu trúc',t:'Con vật'},
+    {w:'ZEBRA',e:'🦓',v:'ngựa vằn',t:'Con vật'}, {w:'WHALE',e:'🐳',v:'cá voi',t:'Con vật'},
     {w:'RABBIT',e:'🐰',v:'con thỏ',t:'Con vật'}, {w:'MONKEY',e:'🐵',v:'con khỉ',t:'Con vật'},
+    {w:'TURTLE',e:'🐢',v:'con rùa',t:'Con vật'}, {w:'SPIDER',e:'🕷️',v:'con nhện',t:'Con vật'},
+    {w:'CHICKEN',e:'🐔',v:'con gà',t:'Con vật'}, {w:'PENGUIN',e:'🐧',v:'chim cánh cụt',t:'Con vật'},
+    {w:'DOLPHIN',e:'🐬',v:'cá heo',t:'Con vật'}, {w:'GIRAFFE',e:'🦒',v:'hươu cao cổ',t:'Con vật'},
+    {w:'ELEPHANT',e:'🐘',v:'con voi',t:'Con vật'},{w:'KANGAROO',e:'🦘',v:'chuột túi',t:'Con vật'},
+    {w:'OCTOPUS',e:'🐙',v:'bạch tuộc',t:'Con vật'},{w:'CROCODILE',e:'🐊',v:'cá sấu',t:'Con vật'},
+    {w:'BUTTERFLY',e:'🦋',v:'con bướm',t:'Con vật'},
     // Đồ ăn
     {w:'EGG',e:'🥚',v:'quả trứng',t:'Đồ ăn'},    {w:'MILK',e:'🥛',v:'sữa',t:'Đồ ăn'},
     {w:'CAKE',e:'🍰',v:'bánh ngọt',t:'Đồ ăn'},   {w:'RICE',e:'🍚',v:'cơm',t:'Đồ ăn'},
-    {w:'APPLE',e:'🍎',v:'quả táo',t:'Đồ ăn'},    {w:'BREAD',e:'🍞',v:'bánh mì',t:'Đồ ăn'},
-    {w:'GRAPE',e:'🍇',v:'quả nho',t:'Đồ ăn'},    {w:'LEMON',e:'🍋',v:'quả chanh',t:'Đồ ăn'},
-    {w:'PIZZA',e:'🍕',v:'pizza',t:'Đồ ăn'},      {w:'CANDY',e:'🍬',v:'kẹo',t:'Đồ ăn'},
-    {w:'HONEY',e:'🍯',v:'mật ong',t:'Đồ ăn'},    {w:'JUICE',e:'🧃',v:'nước ép',t:'Đồ ăn'},
+    {w:'MANGO',e:'🥭',v:'quả xoài',t:'Đồ ăn'},   {w:'APPLE',e:'🍎',v:'quả táo',t:'Đồ ăn'},
+    {w:'BREAD',e:'🍞',v:'bánh mì',t:'Đồ ăn'},    {w:'GRAPE',e:'🍇',v:'quả nho',t:'Đồ ăn'},
+    {w:'LEMON',e:'🍋',v:'quả chanh',t:'Đồ ăn'},  {w:'PIZZA',e:'🍕',v:'pizza',t:'Đồ ăn'},
+    {w:'CANDY',e:'🍬',v:'kẹo',t:'Đồ ăn'},        {w:'HONEY',e:'🍯',v:'mật ong',t:'Đồ ăn'},
+    {w:'JUICE',e:'🧃',v:'nước ép',t:'Đồ ăn'},    {w:'BANANA',e:'🍌',v:'quả chuối',t:'Đồ ăn'},
+    {w:'ORANGE',e:'🍊',v:'quả cam',t:'Đồ ăn'},   {w:'CARROT',e:'🥕',v:'cà rốt',t:'Đồ ăn'},
+    {w:'CHEESE',e:'🧀',v:'phô mai',t:'Đồ ăn'},   {w:'COOKIE',e:'🍪',v:'bánh quy',t:'Đồ ăn'},
+    {w:'NOODLE',e:'🍜',v:'mì',t:'Đồ ăn'},        {w:'POTATO',e:'🥔',v:'khoai tây',t:'Đồ ăn'},
+    {w:'ONION',e:'🧅',v:'hành tây',t:'Đồ ăn'},   {w:'MUSHROOM',e:'🍄',v:'nấm',t:'Đồ ăn'},
+    {w:'SANDWICH',e:'🥪',v:'bánh sandwich',t:'Đồ ăn'},{w:'CHOCOLATE',e:'🍫',v:'sô cô la',t:'Đồ ăn'},
+    {w:'WATERMELON',e:'🍉',v:'dưa hấu',t:'Đồ ăn'},
     // Thiên nhiên
     {w:'SUN',e:'☀️',v:'mặt trời',t:'Thiên nhiên'},{w:'STAR',e:'⭐',v:'ngôi sao',t:'Thiên nhiên'},
+    {w:'WIND',e:'🌬️',v:'gió',t:'Thiên nhiên'},
     {w:'MOON',e:'🌙',v:'mặt trăng',t:'Thiên nhiên'},{w:'TREE',e:'🌳',v:'cái cây',t:'Thiên nhiên'},
     {w:'RAIN',e:'🌧️',v:'mưa',t:'Thiên nhiên'},   {w:'LEAF',e:'🍃',v:'chiếc lá',t:'Thiên nhiên'},
     {w:'SNOW',e:'❄️',v:'tuyết',t:'Thiên nhiên'}, {w:'CLOUD',e:'☁️',v:'đám mây',t:'Thiên nhiên'},
     {w:'RIVER',e:'🏞️',v:'dòng sông',t:'Thiên nhiên'},{w:'FLOWER',e:'🌸',v:'bông hoa',t:'Thiên nhiên'},
+    {w:'ISLAND',e:'🏝️',v:'hòn đảo',t:'Thiên nhiên'},{w:'DESERT',e:'🏜️',v:'sa mạc',t:'Thiên nhiên'},
+    {w:'FOREST',e:'🌲',v:'khu rừng',t:'Thiên nhiên'},{w:'RAINBOW',e:'🌈',v:'cầu vồng',t:'Thiên nhiên'},
+    {w:'THUNDER',e:'⛈️',v:'sấm sét',t:'Thiên nhiên'},{w:'VOLCANO',e:'🌋',v:'núi lửa',t:'Thiên nhiên'},
+    {w:'MOUNTAIN',e:'⛰️',v:'ngọn núi',t:'Thiên nhiên'},
     // Trường học
     {w:'PEN',e:'🖊️',v:'cây bút',t:'Trường học'}, {w:'BAG',e:'🎒',v:'cái cặp',t:'Trường học'},
     {w:'BOOK',e:'📖',v:'quyển sách',t:'Trường học'},{w:'DESK',e:'🪑',v:'cái bàn',t:'Trường học'},
     {w:'RULER',e:'📏',v:'thước kẻ',t:'Trường học'},{w:'PAPER',e:'📄',v:'tờ giấy',t:'Trường học'},
     {w:'CLOCK',e:'🕐',v:'đồng hồ',t:'Trường học'},{w:'PENCIL',e:'✏️',v:'bút chì',t:'Trường học'},
+    {w:'CRAYON',e:'🖍️',v:'bút sáp màu',t:'Trường học'},{w:'GLOBE',e:'🌍',v:'quả địa cầu',t:'Trường học'},
+    {w:'SCISSORS',e:'✂️',v:'cái kéo',t:'Trường học'},{w:'LIBRARY',e:'📚',v:'thư viện',t:'Trường học'},
+    {w:'COMPUTER',e:'💻',v:'máy vi tính',t:'Trường học'},
     // Nhà cửa & đồ vật
     {w:'BALL',e:'⚽',v:'quả bóng',t:'Đồ vật'},   {w:'DOOR',e:'🚪',v:'cái cửa',t:'Đồ vật'},
     {w:'LAMP',e:'💡',v:'cái đèn',t:'Đồ vật'},    {w:'HOUSE',e:'🏠',v:'ngôi nhà',t:'Đồ vật'},
     {w:'CHAIR',e:'🪑',v:'cái ghế',t:'Đồ vật'},   {w:'SPOON',e:'🥄',v:'cái thìa',t:'Đồ vật'},
-    {w:'TRAIN',e:'🚂',v:'tàu hỏa',t:'Đồ vật'},   {w:'HEART',e:'❤️',v:'trái tim',t:'Đồ vật'},
+    {w:'HEART',e:'❤️',v:'trái tim',t:'Đồ vật'},  {w:'MIRROR',e:'🪞',v:'cái gương',t:'Đồ vật'},
+    {w:'GUITAR',e:'🎸',v:'đàn ghi-ta',t:'Đồ vật'},{w:'CAMERA',e:'📷',v:'máy ảnh',t:'Đồ vật'},
+    {w:'ROCKET',e:'🚀',v:'tên lửa',t:'Đồ vật'},   {w:'ROBOT',e:'🤖',v:'người máy',t:'Đồ vật'},
+    {w:'BALLOON',e:'🎈',v:'bong bóng',t:'Đồ vật'},{w:'UMBRELLA',e:'☂️',v:'cái ô/dù',t:'Đồ vật'},
+    // Phương tiện
+    {w:'CAR',e:'🚗',v:'xe ô tô',t:'Phương tiện'},  {w:'BUS',e:'🚌',v:'xe buýt',t:'Phương tiện'},
+    {w:'BIKE',e:'🚲',v:'xe đạp',t:'Phương tiện'},   {w:'BOAT',e:'⛵',v:'thuyền',t:'Phương tiện'},
+    {w:'SHIP',e:'🚢',v:'tàu thủy',t:'Phương tiện'}, {w:'PLANE',e:'✈️',v:'máy bay',t:'Phương tiện'},
+    {w:'TRUCK',e:'🚚',v:'xe tải',t:'Phương tiện'},  {w:'TRAIN',e:'🚂',v:'tàu hỏa',t:'Phương tiện'},
+    {w:'SCOOTER',e:'🛴',v:'xe scooter',t:'Phương tiện'},
+    // Nghề nghiệp
+    {w:'CHEF',e:'👨‍🍳',v:'đầu bếp',t:'Nghề nghiệp'}, {w:'ARTIST',e:'🎨',v:'họa sĩ',t:'Nghề nghiệp'},
+    {w:'SINGER',e:'🎤',v:'ca sĩ',t:'Nghề nghiệp'},   {w:'FARMER',e:'👨‍🌾',v:'nông dân',t:'Nghề nghiệp'},
+    {w:'DOCTOR',e:'👨‍⚕️',v:'bác sĩ',t:'Nghề nghiệp'},{w:'TEACHER',e:'👩‍🏫',v:'giáo viên',t:'Nghề nghiệp'},
+    {w:'STUDENT',e:'🧑‍🎓',v:'học sinh',t:'Nghề nghiệp'},
   ];
+
+  // Kiểu hoạt hình khi ghép xong từ (mặc định 'spin' nếu không khai báo)
+  const ACTION = {
+    CAT:'run', DOG:'run', FOX:'run', WOLF:'run', GOAT:'run', DEER:'run', BEAR:'run', PANDA:'run',
+    TIGER:'run', HORSE:'run', SHEEP:'run', MOUSE:'run', ZEBRA:'run', MONKEY:'run', SPIDER:'run',
+    CHICKEN:'run', GIRAFFE:'run', ELEPHANT:'run',
+    OWL:'fly', BIRD:'fly', DUCK:'fly', BUTTERFLY:'fly',
+    FISH:'swim', SNAKE:'swim', WHALE:'swim', DOLPHIN:'swim', OCTOPUS:'swim', CROCODILE:'swim',
+    FROG:'bounce', RABBIT:'bounce', KANGAROO:'bounce', BALL:'bounce', PENGUIN:'bounce', TURTLE:'bounce',
+    SUN:'fly', STAR:'fly', MOON:'fly', CLOUD:'fly', WIND:'fly', RAINBOW:'fly',
+    RAIN:'rain', SNOW:'rain', THUNDER:'rain',
+    CAR:'run', BUS:'run', BIKE:'run', TRUCK:'run', TRAIN:'run', SCOOTER:'run',
+    BOAT:'swim', SHIP:'swim', PLANE:'fly', ROCKET:'fly', BALLOON:'fly',
+  };
+  function actionFor(word){ return ACTION[word] || 'spin'; }
 
   // ---- Hình khối (toạ độ r,c chuẩn hoá về góc trên-trái) ----
   const SHAPES = [
@@ -287,8 +389,8 @@
   // Lọc từ theo cấp độ (độ dài)
   function wordsFor(level){
     if(level==='easy') return WORDS.filter(x=>x.w.length<=4);
-    if(level==='med')  return WORDS.filter(x=>x.w.length>=4 && x.w.length<=5);
-    return WORDS.filter(x=>x.w.length>=5);
+    if(level==='med')  return WORDS.filter(x=>x.w.length>=5 && x.w.length<=6);
+    return WORDS.filter(x=>x.w.length>=7);
   }
 
   // ---- Trạng thái ----
@@ -416,6 +518,7 @@
     speak(wd.w);
     score+=100; wordsDone++; renderScore();
     cheer(wd.e, wd.w);
+    setTimeout(()=>playWordAction(wd), 350);
     setTimeout(()=>rewardBlast(), 300);
     setTimeout(()=>{
       let nx; do{ nx=(Math.random()*WLIST.length)|0; }while(nx===wordIdx && WLIST.length>1);
@@ -431,6 +534,29 @@
     pick.forEach(([r,c])=>{ cells[idx(r,c)].classList.add('clearing'); });
     if(pick.length){ sClear(1); pick.forEach(([r,c])=>spawnParticles(cells[idx(r,c)], board[r][c])); }
     setTimeout(()=>{ pick.forEach(([r,c])=>board[r][c]=null); renderBoard(); checkGameOver(); }, 300);
+  }
+
+  function playWordAction(wd){
+    const act=actionFor(wd.w);
+    const overlay=document.createElement('div');
+    overlay.className='word-action-overlay';
+    document.body.appendChild(overlay);
+    if(act==='rain'){
+      for(let i=0;i<4;i++){
+        const e=document.createElement('div');
+        e.className='wa-emoji wa-rain';
+        e.textContent=wd.e;
+        e.style.left=(12+i*22+Math.random()*8)+'%';
+        e.style.animationDelay=(i*0.14)+'s';
+        overlay.appendChild(e);
+      }
+    } else {
+      const e=document.createElement('div');
+      e.className='wa-emoji wa-'+act;
+      e.textContent=wd.e;
+      overlay.appendChild(e);
+    }
+    setTimeout(()=>overlay.remove(), 2200);
   }
 
   function cheer(emoji,word){
