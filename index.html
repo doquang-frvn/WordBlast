@@ -70,8 +70,10 @@
 
   /* ---------- Board ---------- */
   .board-wrap{display:flex; justify-content:center;}
+  .board-outer{width:min(92vw, 460px); position:relative;}
+  .board-outer::before{content:""; display:block; padding-top:100%;}
   #board{
-    width:min(92vw, 460px); aspect-ratio:1/1;
+    position:absolute; inset:0;
     display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr);
     gap:5px; padding:9px; background:var(--panel); border:2px solid var(--panel-line);
     border-radius:22px; box-shadow:var(--shadow); touch-action:none;
@@ -235,6 +237,31 @@
   .newcard-pop .nw{font-family:'Baloo 2',cursive; font-weight:800; font-size:22px; color:var(--teal-d);}
   @keyframes newcardIn{0%{opacity:0; transform:translate(-50%,-50%) scale(.4) rotate(-6deg)}12%{opacity:1; transform:translate(-50%,-50%) scale(1.1) rotate(2deg)}22%{transform:translate(-50%,-50%) scale(1) rotate(0)}82%{opacity:1; transform:translate(-50%,-50%) scale(1)}100%{opacity:0; transform:translate(-50%,-62%) scale(.9)}}
 
+  /* ---------- Khối đặc biệt ---------- */
+  .pcell.sp{display:flex; align-items:center; justify-content:center; line-height:1;
+    font-size:calc(var(--pc,17px) * .78); animation:spPulse .9s ease-in-out infinite alternate;}
+  #floater .pcell.sp{font-size:calc(var(--fc,34px) * .78);}
+  .pcell.sp-bomb{background:linear-gradient(135deg,#7C8FA0,#2C3E50);}
+  .pcell.sp-rainbow{background:linear-gradient(135deg,#FF6B6B,#FFC53D,#5FC97B,#4D96FF,#9B72CF);}
+  @keyframes spPulse{0%{filter:brightness(1)}100%{filter:brightness(1.35) drop-shadow(0 0 6px var(--gold))}}
+  .cell.sp-cell{display:flex; align-items:center; justify-content:center; font-size:70%;}
+
+  /* ---------- Preview hàng sắp nổ ---------- */
+  .cell.ghost-line{background:rgba(240,165,0,.55)!important; outline:2px solid var(--gold); outline-offset:-2px;
+    animation:linePulse .6s ease-in-out infinite alternate;}
+  @keyframes linePulse{0%{filter:brightness(1)}100%{filter:brightness(1.4)}}
+
+  /* ---------- Pháo hoa ---------- */
+  .fw{position:fixed; left:0; top:0; font-size:24px; pointer-events:none; z-index:88; will-change:transform,opacity;
+    animation:fly var(--dur,1s) cubic-bezier(.15,.7,.3,1) forwards;}
+
+  /* ---------- Thanh chuỗi combo ---------- */
+  .streakbar{display:flex; justify-content:center; min-height:0; margin-top:-4px;}
+  .streak-chip{background:linear-gradient(135deg,#FF9445,#FF6B6B); color:#fff;
+    font-family:'Baloo 2',cursive; font-weight:800; font-size:15px; padding:5px 16px; border-radius:99px;
+    box-shadow:0 4px 0 rgba(0,0,0,.15); animation:chipIn .35s cubic-bezier(.2,1.3,.4,1);}
+  @keyframes chipIn{0%{transform:scale(.5); opacity:0}100%{transform:scale(1); opacity:1}}
+
   /* celebration toast */
   #cheer{position:fixed; left:50%; top:34%; transform:translate(-50%,-50%) scale(.5); opacity:0; z-index:90; pointer-events:none; text-align:center;}
   #cheer.show{animation:cheer 1.4s ease forwards;}
@@ -265,10 +292,12 @@
     <button class="speak" id="speak">🔊 Nghe</button>
   </div>
 
-  <div class="board-wrap"><div id="board"></div></div>
+  <div class="streakbar" id="streakbar"></div>
+
+  <div class="board-wrap"><div class="board-outer"><div id="board"></div></div></div>
 
   <div id="tray"></div>
-  <div class="hint">Kéo khối thả vào bảng · lấp kín hàng/cột để nổ khối · chạm chữ để nghe</div>
+  <div class="hint">Kéo khối thả vào bảng · 💣 nổ vùng 3×3 · 🌈 xóa cả hàng và cột</div>
 </div>
 
 <div id="floater"></div>
@@ -533,7 +562,7 @@
     document.getElementById('mute').textContent='🔊';
     wordIdx = (Math.random()*WLIST.length)|0;
     revealed=0;
-    renderScore(); renderBoard(); renderWord(); refillTray();
+    renderScore(); renderBoard(); renderWord(); renderStreak(); refillTray();
     document.getElementById('levelscreen').classList.remove('show');
     document.getElementById('gameover').classList.remove('show');
   }
@@ -706,7 +735,12 @@
   }
 
   // ---- Khay khối ----
+  const SP_EMOJI={bomb:'💣', rainbow:'🌈'};
   function makePiece(){
+    // ~9% cơ hội ra khối đặc biệt (1 ô, luôn đặt được)
+    const roll=Math.random();
+    if(roll<0.055) return {shape:[[0,0]], color:'--sun', special:'bomb', used:false};
+    if(roll<0.09)  return {shape:[[0,0]], color:'--grape', special:'rainbow', used:false};
     const shape=POOL[(Math.random()*POOL.length)|0];
     const color=COLORS[(Math.random()*COLORS.length)|0];
     return {shape, color, used:false};
@@ -728,7 +762,11 @@
       const set=new Set(p.shape.map(([r,c])=>r+','+c));
       for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
         const d=document.createElement('div');
-        if(set.has(r+','+c)){ d.className='pcell'; d.style.background=`var(${p.color})`; }
+        if(set.has(r+','+c)){
+          d.className='pcell';
+          if(p.special){ d.classList.add('sp','sp-'+p.special); d.textContent=SP_EMOJI[p.special]; }
+          else d.style.background=`var(${p.color})`;
+        }
         else d.className='pcell empty';
         wrap.appendChild(d);
       }
@@ -815,9 +853,81 @@
     setTimeout(()=>label.remove(), 2450);
 
     megaSound();
+    spawnFireworks(5);
     boardEl.classList.remove('mega-shake'); void boardEl.offsetWidth; boardEl.classList.add('mega-shake');
     bumpScore(50);
     setTimeout(()=>overlay.remove(), 1700);
+  }
+
+  // ---- Pháo hoa ----
+  function spawnFireworks(bursts){
+    const chars=['⭐','✨','🌟','💫','🎉','🎊'];
+    for(let k=0;k<bursts;k++){
+      setTimeout(()=>{
+        const cx=window.innerWidth*(.2+.6*Math.random());
+        const cy=window.innerHeight*(.15+.35*Math.random());
+        beep(700+Math.random()*450,.12,'sine');
+        for(let i=0;i<10;i++){
+          const p=document.createElement('div');
+          p.className='fw';
+          p.textContent=chars[(Math.random()*chars.length)|0];
+          const ang=(Math.PI*2*i/10)+Math.random()*.5;
+          const dist=60+Math.random()*75;
+          p.style.setProperty('--x0',cx+'px'); p.style.setProperty('--y0',cy+'px');
+          p.style.setProperty('--x1',(cx+Math.cos(ang)*dist)+'px');
+          p.style.setProperty('--y1',(cy+Math.sin(ang)*dist)+'px');
+          p.style.setProperty('--dur',(.9+Math.random()*.5)+'s');
+          document.body.appendChild(p);
+          setTimeout(()=>p.remove(),1600);
+        }
+      }, k*280);
+    }
+  }
+
+  // ---- Thanh chuỗi combo ----
+  function renderStreak(){
+    const bar=document.getElementById('streakbar');
+    if(streak>=2) bar.innerHTML=`<div class="streak-chip">🔥 CHUỖI x${streak}</div>`;
+    else bar.innerHTML='';
+  }
+
+  // ---- Khối đặc biệt: kích hoạt khi thả ----
+  function triggerSpecial(p,sr,sc){
+    const toClear=new Set();
+    if(p.special==='bomb'){
+      for(let r=sr-1;r<=sr+1;r++) for(let c=sc-1;c<=sc+1;c++)
+        if(r>=0&&r<N&&c>=0&&c<N&&board[r][c]) toClear.add(idx(r,c));
+    } else { // cầu vồng: xóa cả hàng lẫn cột
+      for(let c=0;c<N;c++) if(board[sr][c]) toClear.add(idx(sr,c));
+      for(let r=0;r<N;r++) if(board[r][sc]) toClear.add(idx(r,sc));
+    }
+    renderBoard();
+    toClear.forEach(i=>{
+      cells[i].classList.add('clearing');
+      spawnParticles(cells[i], board[(i/N)|0][i%N]);
+    });
+    if(p.special==='bomb'){
+      beep(90,.5,'sawtooth'); setTimeout(()=>beep(60,.5,'sawtooth'),120);
+      boardEl.classList.remove('mega-shake'); void boardEl.offsetWidth; boardEl.classList.add('mega-shake');
+    } else {
+      chord([NOTE.C5,NOTE.E5,NOTE.G5,NOTE.C6,NOTE.E5,NOTE.G5],.2,'sine',80);
+    }
+    spawnFireworks(2);
+    const label=document.createElement('div');
+    label.className='combo-pop';
+    label.textContent = p.special==='bomb' ? 'BÙM! 💣' : 'CẦU VỒNG! 🌈';
+    const rect=boardEl.getBoundingClientRect();
+    label.style.left=(rect.left+rect.width/2)+'px';
+    label.style.top=(rect.top+rect.height*0.4)+'px';
+    label.style.fontSize='30px';
+    document.body.appendChild(label);
+    setTimeout(()=>label.remove(), 850);
+
+    bumpScore(toClear.size*10 + 40);
+    setTimeout(()=>{
+      toClear.forEach(i=>{ board[(i/N)|0][i%N]=null; });
+      applyGravityAnimated(()=>{ afterPlace(); });
+    }, 480);
   }
 
   function showCombo(lines){
@@ -908,15 +1018,30 @@
     renderBoard();
     clearLines((totalLines)=>{
       if(totalLines>0) streak++; else streak=0;
+      renderStreak();
+      if(totalLines>=2) spawnFireworks(totalLines>=3?3:2);
+      if(streak>=2 && totalLines>0) showStreakPop();
       if(totalLines>=3 || streak>=3){
         setTimeout(()=>megaStrike(), 200);
-        streak=0;
+        streak=0; renderStreak();
       }
       if(totalLines>0) earnLetters(totalLines);
       bumpScore(1);
       if(tray.every(p=>p.used)) refillTray();
       else checkGameOver();
     });
+  }
+
+  function showStreakPop(){
+    const rect=boardEl.getBoundingClientRect();
+    const label=document.createElement('div');
+    label.className='combo-pop';
+    label.textContent='🔥 CHUỖI x'+streak+'!';
+    label.style.left=(rect.left+rect.width/2)+'px';
+    label.style.top=(rect.top+rect.height*0.15)+'px';
+    label.style.fontSize='24px';
+    document.body.appendChild(label);
+    setTimeout(()=>label.remove(), 850);
   }
 
   function anyMove(){
@@ -955,7 +1080,11 @@
     const set=new Set(p.shape.map(([r,c])=>r+','+c));
     for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
       const d=document.createElement('div');
-      if(set.has(r+','+c)){ d.className='pcell'; d.style.background=`var(${p.color})`; }
+      if(set.has(r+','+c)){
+        d.className='pcell';
+        if(p.special){ d.classList.add('sp','sp-'+p.special); d.textContent=SP_EMOJI[p.special]; }
+        else d.style.background=`var(${p.color})`;
+      }
       else d.className='pcell empty';
       floater.appendChild(d);
     }
@@ -986,7 +1115,7 @@
     paintGhost(row,col);
   }
 
-  function clearGhost(){ cells.forEach(c=>c.classList.remove('ghost-ok','ghost-bad')); }
+  function clearGhost(){ cells.forEach(c=>c.classList.remove('ghost-ok','ghost-bad','ghost-line')); }
   function paintGhost(ar,ac){
     clearGhost();
     const ok=canPlace(drag.p.shape,ar,ac);
@@ -994,6 +1123,25 @@
       const R=ar+r,C=ac+c;
       if(R>=0&&R<N&&C>=0&&C<N) cells[idx(R,C)].classList.add(ok?'ghost-ok':'ghost-bad');
     });
+    // Xem trước: hàng/cột nào sẽ nổ nếu thả ở đây
+    if(ok && !drag.p.special){
+      const sim=board.map(row=>row.slice());
+      drag.p.shape.forEach(([r,c])=>{ sim[ar+r][ac+c]='x'; });
+      for(let r=0;r<N;r++) if(sim[r].every(v=>v)) for(let c=0;c<N;c++) cells[idx(r,c)].classList.add('ghost-line');
+      for(let c=0;c<N;c++){ let f=true; for(let r=0;r<N;r++) if(!sim[r][c]){f=false;break;}
+        if(f) for(let r=0;r<N;r++) cells[idx(r,c)].classList.add('ghost-line'); }
+    }
+    // Xem trước vùng nổ của khối đặc biệt
+    if(ok && drag.p.special){
+      const sr=ar, sc=ac;
+      if(drag.p.special==='bomb'){
+        for(let r=sr-1;r<=sr+1;r++) for(let c=sc-1;c<=sc+1;c++)
+          if(r>=0&&r<N&&c>=0&&c<N) cells[idx(r,c)].classList.add('ghost-line');
+      } else {
+        for(let c=0;c<N;c++) cells[idx(sr,c)].classList.add('ghost-line');
+        for(let r=0;r<N;r++) cells[idx(r,sc)].classList.add('ghost-line');
+      }
+    }
     drag.ok=ok;
   }
 
@@ -1007,7 +1155,9 @@
     const [ar,ac]=d.anchor;
     if(canPlace(d.p.shape,ar,ac)){
       place(d.p,ar,ac); d.p.used=true;
-      renderTray(); sPlace(); afterPlace();
+      renderTray(); sPlace();
+      if(d.p.special) triggerSpecial(d.p, ar, ac);
+      else afterPlace();
     }
   }
 
